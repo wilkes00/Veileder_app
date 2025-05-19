@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaGraduationCap, FaSearch, FaUsers, FaChalkboardTeacher, FaCog, FaSignOutAlt, FaKey, FaUser } from 'react-icons/fa';
+import { FaGraduationCap, FaSearch, FaUsers, FaChalkboardTeacher, FaCog, FaSignOutAlt, FaKey, FaUser, FaPlus } from 'react-icons/fa';
 import { supabase } from '../lib/supabase';
 
 interface User {
@@ -12,18 +12,37 @@ interface User {
   subjects: string[];
 }
 
+interface StudyGroup {
+  id: string;
+  name: string;
+  description: string;
+  subject: string;
+  creator_id: string;
+  max_participants: number;
+  creator?: User;
+  member_count?: number;
+}
+
 function Home() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchType, setSearchType] = useState<'students' | 'professors' | null>(null);
+  const [searchType, setSearchType] = useState<'students' | 'professors' | 'groups' | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [groupResults, setGroupResults] = useState<StudyGroup[]>([]);
+  const [newGroup, setNewGroup] = useState({
+    name: '',
+    description: '',
+    subject: '',
+    max_participants: 10
+  });
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,33 +59,111 @@ function Home() {
         return;
       }
 
-      let query = supabase
-        .from('users')
-        .select('*')
-        .neq('id', user.id)
-        .eq('account_type', searchType === 'professors' ? 'professor' : 'student');
+      if (searchType === 'groups') {
+        let query = supabase
+          .from('study_groups')
+          .select(`
+            *,
+            creator:creator_id(full_name, username),
+            member_count:group_members(count)
+          `);
 
-      if (searchQuery) {
-        query = query.or(`full_name.ilike.%${searchQuery}%,username.ilike.%${searchQuery}%`);
+        if (searchQuery) {
+          query = query.or(`name.ilike.%${searchQuery}%,subject.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+        }
+
+        const { data, error: searchError } = await query;
+
+        if (searchError) throw searchError;
+        setGroupResults(data || []);
+        setSearchResults([]);
+      } else {
+        let query = supabase
+          .from('users')
+          .select('*')
+          .neq('id', user.id)
+          .eq('account_type', searchType === 'professors' ? 'professor' : 'student');
+
+        if (searchQuery) {
+          query = query.or(`full_name.ilike.%${searchQuery}%,username.ilike.%${searchQuery}%`);
+        }
+
+        const { data, error: searchError } = await query;
+
+        if (searchError) throw searchError;
+
+        const filteredData = searchQuery
+          ? data?.filter(user => 
+              user.subjects?.some(subject => 
+                subject.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+            ) || []
+          : data || [];
+
+        setSearchResults(filteredData);
+        setGroupResults([]);
       }
-
-      const { data, error: searchError } = await query;
-
-      if (searchError) throw searchError;
-
-      // Filter results by subjects if searchQuery matches any subject
-      const filteredData = searchQuery
-        ? data?.filter(user => 
-            user.subjects?.some(subject => 
-              subject.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-          ) || []
-        : data || [];
-
-      setSearchResults(filteredData);
+      
       setError(null);
     } catch (error: any) {
-      setError('Error al buscar usuarios: ' + error.message);
+      setError('Error al buscar: ' + error.message);
+    }
+  };
+
+  const handleCreateGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        navigate('/');
+        return;
+      }
+
+      const { data: group, error: groupError } = await supabase
+        .from('study_groups')
+        .insert([
+          {
+            ...newGroup,
+            creator_id: user.id
+          }
+        ])
+        .select()
+        .single();
+
+      if (groupError) throw groupError;
+
+      // Add creator as admin member
+      const { error: memberError } = await supabase
+        .from('group_members')
+        .insert([
+          {
+            group_id: group.id,
+            user_id: user.id,
+            role: 'admin'
+          }
+        ]);
+
+      if (memberError) throw memberError;
+
+      setSuccess('Grupo creado exitosamente');
+      setShowCreateGroup(false);
+      setNewGroup({
+        name: '',
+        description: '',
+        subject: '',
+        max_participants: 10
+      });
+
+      // Refresh search results if we're viewing groups
+      if (searchType === 'groups') {
+        handleSearch(e);
+      }
+    } catch (error: any) {
+      setError('Error al crear el grupo: ' + error.message);
     }
   };
 
@@ -213,6 +310,108 @@ function Home() {
             </div>
           )}
 
+          {showCreateGroup && (
+            <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-4xl mb-8">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">Crear Grupo de Estudio</h2>
+                <button
+                  onClick={() => setShowCreateGroup(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateGroup} className="space-y-4">
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">
+                    Nombre del grupo
+                  </label>
+                  <input
+                    type="text"
+                    value={newGroup.name}
+                    onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                    placeholder="Ej: Grupo de Cálculo A"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">
+                    Descripción
+                  </label>
+                  <textarea
+                    value={newGroup.description}
+                    onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                    placeholder="Describe el propósito del grupo..."
+                    rows={3}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">
+                    Materia
+                  </label>
+                  <select
+                    value={newGroup.subject}
+                    onChange={(e) => setNewGroup({ ...newGroup, subject: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                    required
+                  >
+                    <option value="">Selecciona una materia</option>
+                    {[
+                      'Cálculo A',
+                      'Cálculo D',
+                      'Estructuras de Datos I',
+                      'Estructuras de Datos II',
+                      'Álgebra B',
+                      'Electricidad y Magnetismo',
+                      'Termodinámica'
+                    ].map((subject) => (
+                      <option key={subject} value={subject}>
+                        {subject}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">
+                    Máximo de participantes
+                  </label>
+                  <input
+                    type="number"
+                    value={newGroup.max_participants}
+                    onChange={(e) => setNewGroup({ ...newGroup, max_participants: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                    min="2"
+                    max="50"
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateGroup(false)}
+                    className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                  >
+                    Crear Grupo
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
           <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-4xl">
             <div className="mb-8">
               <form onSubmit={handleSearch} className="flex gap-4 mb-6">
@@ -233,7 +432,7 @@ function Home() {
               </form>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-3 gap-6">
               <div
                 className={`p-6 rounded-lg cursor-pointer transition-all ${
                   searchType === 'students'
@@ -244,10 +443,10 @@ function Home() {
               >
                 <div className="flex items-center mb-4">
                   <FaUsers className="text-3xl text-blue-500 mr-3" />
-                  <h2 className="text-xl font-semibold">Grupos de Estudio</h2>
+                  <h2 className="text-xl font-semibold">Estudiantes</h2>
                 </div>
                 <p className="text-gray-600">
-                  Encuentra otros estudiantes para formar grupos de estudio y colaborar en proyectos académicos.
+                  Encuentra otros estudiantes para colaborar.
                 </p>
               </div>
 
@@ -261,17 +460,77 @@ function Home() {
               >
                 <div className="flex items-center mb-4">
                   <FaChalkboardTeacher className="text-3xl text-blue-500 mr-3" />
-                  <h2 className="text-xl font-semibold">Profesores y Tutores</h2>
+                  <h2 className="text-xl font-semibold">Profesores</h2>
                 </div>
                 <p className="text-gray-600">
-                  Conecta con profesores y tutores especializados en materias específicas para recibir apoyo académico.
+                  Conecta con profesores y tutores.
+                </p>
+              </div>
+
+              <div
+                className={`p-6 rounded-lg cursor-pointer transition-all ${
+                  searchType === 'groups'
+                    ? 'bg-blue-100 border-2 border-blue-500'
+                    : 'bg-gray-50 hover:bg-blue-50'
+                }`}
+                onClick={() => setSearchType('groups')}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <FaUsers className="text-3xl text-blue-500 mr-3" />
+                    <h2 className="text-xl font-semibold">Grupos</h2>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowCreateGroup(true);
+                    }}
+                    className="p-2 text-blue-500 hover:bg-blue-100 rounded-full"
+                    title="Crear grupo"
+                  >
+                    <FaPlus />
+                  </button>
+                </div>
+                <p className="text-gray-600">
+                  Únete a grupos de estudio.
                 </p>
               </div>
             </div>
 
             <div className="mt-8 p-6 bg-gray-50 rounded-lg">
               <h3 className="text-lg font-semibold mb-4">Resultados de búsqueda</h3>
-              {searchResults.length > 0 ? (
+              
+              {searchType === 'groups' ? (
+                groupResults.length > 0 ? (
+                  <div className="space-y-4">
+                    {groupResults.map((group) => (
+                      <div key={group.id} className="bg-white p-4 rounded-lg shadow border border-gray-200">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="text-lg font-semibold">{group.name}</h4>
+                            <p className="text-gray-600">{group.description}</p>
+                            <p className="text-sm text-gray-500 mt-2">
+                              Creado por: {group.creator?.full_name} (@{group.creator?.username})
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                              {group.subject}
+                            </span>
+                            <p className="text-sm text-gray-500 mt-2">
+                              {group.member_count?.[0].count || 0}/{group.max_participants} miembros
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-gray-600 text-center">
+                    No se encontraron grupos. ¿Por qué no creas uno?
+                  </div>
+                )
+              ) : searchResults.length > 0 ? (
                 <div className="space-y-4">
                   {searchResults.map((user) => (
                     <div
