@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaGraduationCap, FaEnvelope, FaArrowLeft } from 'react-icons/fa';
+import { FaGraduationCap, FaEnvelope, FaArrowLeft, FaUserCircle } from 'react-icons/fa';
 import { supabase } from '../lib/supabase';
 
 interface User {
@@ -91,6 +91,15 @@ function UserProfile() {
     );
   }
 
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600">
       <div className="container mx-auto px-4 py-8">
@@ -111,41 +120,44 @@ function UserProfile() {
           </div>
 
           <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">
-                Perfil de {user.full_name}
-              </h2>
-              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                {user.account_type === 'professor' ? 'Profesor' : 'Estudiante'}
-              </span>
+            <div className="flex items-start space-x-6 mb-6">
+              <div className="flex-shrink-0">
+                <div className="w-24 h-24 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl font-bold">
+                  {getInitials(user.full_name)}
+                </div>
+              </div>
+              <div className="flex-grow">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    {user.full_name}
+                  </h2>
+                  <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                    {user.account_type === 'professor' ? 'Profesor' : 'Estudiante'}
+                  </span>
+                </div>
+                <p className="text-gray-600 mb-2">@{user.username}</p>
+                <p className="text-gray-700 font-medium">
+                  {user.account_type === 'professor' ? 'Título:' : 'Carrera:'}{' '}
+                  <span className="font-normal">{user.career}</span>
+                </p>
+              </div>
             </div>
 
-            <div className="space-y-4 mb-8">
-              <p className="text-gray-600">
-                <span className="font-semibold">Usuario:</span> @{user.username}
-              </p>
-              <p className="text-gray-600">
-                <span className="font-semibold">
-                  {user.account_type === 'professor' ? 'Título:' : 'Carrera:'}
-                </span>{' '}
-                {user.career}
-              </p>
-              <div>
-                <p className="font-semibold text-gray-600 mb-2">
-                  {user.account_type === 'professor'
-                    ? 'Materias que imparte:'
-                    : 'Materias de interés:'}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {user.subjects?.map((subject, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                    >
-                      {subject}
-                    </span>
-                  ))}
-                </div>
+            <div className="border-t border-gray-200 pt-6 mb-6">
+              <h3 className="text-lg font-semibold mb-3">
+                {user.account_type === 'professor'
+                  ? 'Materias que imparte:'
+                  : 'Materias de interés:'}
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {user.subjects?.map((subject, index) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                  >
+                    {subject}
+                  </span>
+                ))}
               </div>
             </div>
 
