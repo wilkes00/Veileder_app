@@ -43,17 +43,27 @@ function Home() {
       let query = supabase
         .from('users')
         .select('*')
+        .neq('id', user.id) // Exclude current user from results
         .eq('account_type', searchType === 'professors' ? 'professor' : 'student');
 
       if (searchQuery) {
-        query = query.or(`full_name.ilike.%${searchQuery}%,username.ilike.%${searchQuery}%,subjects.cs.{${searchQuery}}`);
+        query = query.or(`full_name.ilike.%${searchQuery}%,username.ilike.%${searchQuery}%`);
       }
 
-      const { data, error } = await query;
+      const { data, error: searchError } = await query;
 
-      if (error) throw error;
+      if (searchError) throw searchError;
 
-      setSearchResults(data as User[]);
+      // Filter results by subjects if searchQuery matches any subject
+      const filteredData = searchQuery
+        ? data?.filter(user => 
+            user.subjects?.some(subject => 
+              subject.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+          ) || []
+        : data || [];
+
+      setSearchResults(filteredData);
       setError(null);
     } catch (error: any) {
       setError('Error al buscar usuarios: ' + error.message);
@@ -277,7 +287,7 @@ function Home() {
                           {user.account_type === 'professor' ? 'Materias que imparte:' : 'Materias de interés:'}
                         </p>
                         <div className="flex flex-wrap gap-2 mt-1">
-                          {user.subjects.map((subject, index) => (
+                          {user.subjects?.map((subject, index) => (
                             <span
                               key={index}
                               className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
