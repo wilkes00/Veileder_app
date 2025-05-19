@@ -129,6 +129,19 @@ function Register() {
     'Ingeniería en Topografía y Construcción'
   ]
 
+  const professorTitles = [
+    'Doctor',
+    'Maestro en Ciencias',
+    'Maestro en Ingeniería',
+    'Ingeniero',
+    'Licenciado',
+    'Profesor Investigador',
+    'Profesor Titular',
+    'Profesor Asociado',
+    'Tutor Académico',
+    'Instructor Certificado'
+  ]
+
   const subjects = [
     'Cálculo A',
     'Cálculo D',
@@ -206,7 +219,7 @@ function Register() {
                 <label className="block text-gray-700 text-sm font-bold mb-2">
                   <div className="flex items-center">
                     <FaCareer className="mr-2" />
-                    {accountType === 'professor' ? 'Especialidad' : 'Carrera'}
+                    {accountType === 'professor' ? 'Título Académico' : 'Carrera'}
                   </div>
                 </label>
                 <select
@@ -218,12 +231,12 @@ function Register() {
                 >
                   <option value="">
                     {accountType === 'professor' 
-                      ? 'Selecciona tu especialidad' 
+                      ? 'Selecciona tu título académico' 
                       : 'Selecciona tu carrera'}
                   </option>
-                  {careers.map((career) => (
-                    <option key={career} value={career}>
-                      {career}
+                  {(accountType === 'professor' ? professorTitles : careers).map((option) => (
+                    <option key={option} value={option}>
+                      {option}
                     </option>
                   ))}
                 </select>
