@@ -29,6 +29,7 @@ function Home() {
   const [searchType, setSearchType] = useState<'students' | 'professors' | 'groups' | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [showAccountSettings, setShowAccountSettings] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -37,12 +38,51 @@ function Home() {
   const [success, setSuccess] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [groupResults, setGroupResults] = useState<StudyGroup[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userForm, setUserForm] = useState({
+    full_name: '',
+    username: '',
+    career: '',
+    subjects: [] as string[]
+  });
   const [newGroup, setNewGroup] = useState({
     name: '',
     description: '',
     subject: '',
     max_participants: 10
   });
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          navigate('/');
+          return;
+        }
+
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+
+        setCurrentUser(userData);
+        setUserForm({
+          full_name: userData.full_name,
+          username: userData.username,
+          career: userData.career,
+          subjects: userData.subjects || []
+        });
+      } catch (error: any) {
+        console.error('Error fetching user data:', error.message);
+      }
+    };
+
+    fetchCurrentUser();
+  }, [navigate]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,6 +247,88 @@ function Home() {
     }
   };
 
+  const handleSubjectChange = (subject: string) => {
+    setUserForm(prev => ({
+      ...prev,
+      subjects: prev.subjects.includes(subject)
+        ? prev.subjects.filter(s => s !== subject)
+        : [...prev.subjects, subject]
+    }));
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          full_name: userForm.full_name,
+          username: userForm.username,
+          career: userForm.career,
+          subjects: userForm.subjects
+        })
+        .eq('id', currentUser?.id);
+
+      if (error) throw error;
+
+      setSuccess('Perfil actualizado exitosamente');
+      setShowAccountSettings(false);
+      
+      // Update current user state
+      setCurrentUser(prev => prev ? {
+        ...prev,
+        ...userForm
+      } : null);
+    } catch (error: any) {
+      setError('Error al actualizar el perfil: ' + error.message);
+    }
+  };
+
+  const careers = [
+    'Ingeniería en Sistemas Inteligentes',
+    'Ingeniería Civil',
+    'Ingeniería Mecánica',
+    'Ingeniería Eléctrica',
+    'Ingeniería en Computación',
+    'Ingeniería en Mecatrónica',
+    'Ingeniería Ambiental',
+    'Ingeniería Metalúrgica y de Materiales',
+    'Ingeniería Química',
+    'Ingeniería en Geomática',
+    'Ingeniería en Geología',
+    'Ingeniería en Agronomía',
+    'Ingeniería Mecánica Administrativa',
+    'Ingeniería Mecánica Eléctrica',
+    'Ingeniería en Electricidad y Automatización',
+    'Ingeniería en Topografía y Construcción'
+  ];
+
+  const professorTitles = [
+    'Doctor',
+    'Maestro en Ciencias',
+    'Maestro en Ingeniería',
+    'Ingeniero',
+    'Licenciado',
+    'Profesor Investigador',
+    'Profesor Titular',
+    'Profesor Asociado',
+    'Tutor Académico',
+    'Instructor Certificado'
+  ];
+
+  const subjects = [
+    'Cálculo A',
+    'Cálculo D',
+    'Estructuras de Datos I',
+    'Estructuras de Datos II',
+    'Álgebra B',
+    'Electricidad y Magnetismo',
+    'Termodinámica'
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600">
       <div className="container mx-auto px-4 py-8">
@@ -241,7 +363,18 @@ function Home() {
               )}
 
               <div className="space-y-4">
-                {!showPasswordChange ? (
+                <button
+                  onClick={() => {
+                    setShowAccountSettings(true);
+                    setShowPasswordChange(false);
+                  }}
+                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg w-full"
+                >
+                  <FaUser className="mr-3" />
+                  Mi Cuenta
+                </button>
+
+                {!showPasswordChange && !showAccountSettings && (
                   <button
                     onClick={() => setShowPasswordChange(true)}
                     className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg w-full"
@@ -249,7 +382,9 @@ function Home() {
                     <FaKey className="mr-3" />
                     Cambiar contraseña
                   </button>
-                ) : (
+                )}
+
+                {showPasswordChange && (
                   <form onSubmit={handlePasswordChange} className="space-y-4">
                     <div>
                       <label className="block text-gray-700 text-sm font-bold mb-2">
@@ -288,6 +423,94 @@ function Home() {
                         type="button"
                         onClick={() => {
                           setShowPasswordChange(false);
+                          setError(null);
+                          setSuccess(null);
+                        }}
+                        className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {showAccountSettings && (
+                  <form onSubmit={handleUpdateProfile} className="space-y-4">
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2">
+                        Nombre completo
+                      </label>
+                      <input
+                        type="text"
+                        value={userForm.full_name}
+                        onChange={(e) => setUserForm({ ...userForm, full_name: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2">
+                        Nombre de usuario
+                      </label>
+                      <input
+                        type="text"
+                        value={userForm.username}
+                        onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2">
+                        {currentUser?.account_type === 'professor' ? 'Título Académico' : 'Carrera'}
+                      </label>
+                      <select
+                        value={userForm.career}
+                        onChange={(e) => setUserForm({ ...userForm, career: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                        required
+                      >
+                        <option value="">Selecciona una opción</option>
+                        {(currentUser?.account_type === 'professor' ? professorTitles : careers).map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2">
+                        {currentUser?.account_type === 'professor' ? 'Materias que impartes' : 'Materias de interés'}
+                      </label>
+                      <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3">
+                        {subjects.map((subject) => (
+                          <label key={subject} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                            <input
+                              type="checkbox"
+                              checked={userForm.subjects.includes(subject)}
+                              onChange={() => handleSubjectChange(subject)}
+                              className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                            />
+                            <span className="text-gray-700">{subject}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                      >
+                        Guardar cambios
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAccountSettings(false);
                           setError(null);
                           setSuccess(null);
                         }}
@@ -362,15 +585,7 @@ function Home() {
                     required
                   >
                     <option value="">Selecciona una materia</option>
-                    {[
-                      'Cálculo A',
-                      'Cálculo D',
-                      'Estructuras de Datos I',
-                      'Estructuras de Datos II',
-                      'Álgebra B',
-                      'Electricidad y Magnetismo',
-                      'Termodinámica'
-                    ].map((subject) => (
+                    {subjects.map((subject) => (
                       <option key={subject} value={subject}>
                         {subject}
                       </option>
