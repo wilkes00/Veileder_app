@@ -55,19 +55,35 @@ function Home() {
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError) throw authError;
+        
         if (!user) {
           navigate('/');
           return;
         }
 
-        const { data: userData, error } = await supabase
+        const { data: userData, error: userError } = await supabase
           .from('users')
           .select('*')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (error) throw error;
+        if (userError) {
+          if (userError.message.includes('JSON object requested, multiple (or no) rows returned')) {
+            // User not found in the users table
+            navigate('/');
+            return;
+          }
+          throw userError;
+        }
+
+        if (!userData) {
+          // User authenticated but no profile exists
+          navigate('/');
+          return;
+        }
 
         setCurrentUser(userData);
         setUserForm({
@@ -78,6 +94,8 @@ function Home() {
         });
       } catch (error: any) {
         console.error('Error fetching user data:', error.message);
+        // On any error, redirect to login
+        navigate('/');
       }
     };
 
