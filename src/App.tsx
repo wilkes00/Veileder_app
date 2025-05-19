@@ -5,6 +5,7 @@ import Register from './pages/Register'
 import Home from './pages/Home'
 import AccountType from './pages/AccountType'
 import Subscription from './pages/Subscription'
+import UserProfile from './pages/UserProfile'
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/subscription" element={<Subscription />} />
         <Route path="/register" element={<Register />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/user/:username" element={<UserProfile />} />
       </Routes>
     </Router>
   )

@@ -43,7 +43,7 @@ function Home() {
       let query = supabase
         .from('users')
         .select('*')
-        .neq('id', user.id) // Exclude current user from results
+        .neq('id', user.id)
         .eq('account_type', searchType === 'professors' ? 'professor' : 'student');
 
       if (searchQuery) {
@@ -274,7 +274,11 @@ function Home() {
               {searchResults.length > 0 ? (
                 <div className="space-y-4">
                   {searchResults.map((user) => (
-                    <div key={user.id} className="bg-white p-4 rounded-lg shadow border border-gray-200">
+                    <div
+                      key={user.id}
+                      className="bg-white p-4 rounded-lg shadow border border-gray-200 cursor-pointer hover:border-blue-500 transition-colors"
+                      onClick={() => navigate(`/user/${user.username}`)}
+                    >
                       <div className="flex items-start justify-between">
                         <div>
                           <h4 className="text-lg font-semibold">{user.full_name}</h4>
