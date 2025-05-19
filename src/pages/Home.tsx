@@ -1,7 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaGraduationCap, FaSearch, FaUsers, FaChalkboardTeacher, FaCog, FaSignOutAlt, FaKey, FaUser } from 'react-icons/fa';
 import { supabase } from '../lib/supabase';
+
+interface User {
+  id: string;
+  full_name: string;
+  username: string;
+  career: string;
+  account_type: string;
+  subjects: string[];
+}
 
 function Home() {
   const navigate = useNavigate();
@@ -14,11 +23,41 @@ function Home() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<User[]>([]);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement search functionality
-    console.log('Searching for:', searchQuery, 'in category:', searchType);
+    if (!searchType) {
+      setError('Por favor selecciona una categoría de búsqueda');
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        navigate('/');
+        return;
+      }
+
+      let query = supabase
+        .from('users')
+        .select('*')
+        .eq('account_type', searchType === 'professors' ? 'professor' : 'student');
+
+      if (searchQuery) {
+        query = query.or(`full_name.ilike.%${searchQuery}%,username.ilike.%${searchQuery}%,subjects.cs.{${searchQuery}}`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      setSearchResults(data as User[]);
+      setError(null);
+    } catch (error: any) {
+      setError('Error al buscar usuarios: ' + error.message);
+    }
   };
 
   const handleLogout = async () => {
@@ -171,7 +210,7 @@ function Home() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar por nombre o materia..."
+                  placeholder="Buscar por nombre, usuario o materia..."
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
                 />
                 <button
@@ -222,9 +261,42 @@ function Home() {
 
             <div className="mt-8 p-6 bg-gray-50 rounded-lg">
               <h3 className="text-lg font-semibold mb-4">Resultados de búsqueda</h3>
-              <div className="text-gray-600 text-center">
-                Selecciona una categoría y realiza una búsqueda para ver los resultados.
-              </div>
+              {searchResults.length > 0 ? (
+                <div className="space-y-4">
+                  {searchResults.map((user) => (
+                    <div key={user.id} className="bg-white p-4 rounded-lg shadow border border-gray-200">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="text-lg font-semibold">{user.full_name}</h4>
+                          <p className="text-gray-600">@{user.username}</p>
+                          <p className="text-sm text-gray-500">{user.career}</p>
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-600 font-medium">
+                          {user.account_type === 'professor' ? 'Materias que imparte:' : 'Materias de interés:'}
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {user.subjects.map((subject, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                            >
+                              {subject}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-600 text-center">
+                  {searchType 
+                    ? 'No se encontraron resultados para tu búsqueda.'
+                    : 'Selecciona una categoría y realiza una búsqueda para ver los resultados.'}
+                </div>
+              )}
             </div>
           </div>
         </div>

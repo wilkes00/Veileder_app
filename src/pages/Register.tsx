@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { FaUser, FaLock, FaGraduationCap, FaEnvelope, FaUserCircle, FaGraduationCap as FaCareer } from 'react-icons/fa'
+import { FaUser, FaLock, FaGraduationCap, FaEnvelope, FaUserCircle, FaGraduationCap as FaCareer, FaBook } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
@@ -11,7 +11,8 @@ function Register() {
     career: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    subjects: [] as string[]
   })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -24,6 +25,15 @@ function Register() {
       ...formData,
       [e.target.name]: e.target.value
     })
+  }
+
+  const handleSubjectChange = (subject: string) => {
+    setFormData(prevData => ({
+      ...prevData,
+      subjects: prevData.subjects.includes(subject)
+        ? prevData.subjects.filter(s => s !== subject)
+        : [...prevData.subjects, subject]
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,6 +50,14 @@ function Register() {
 
     if (formData.password.length < 6) {
       setError('La contraseña debe tener al menos 6 caracteres')
+      setLoading(false)
+      return
+    }
+
+    if (formData.subjects.length === 0) {
+      setError(accountType === 'professor' 
+        ? 'Por favor, selecciona al menos una materia que impartes'
+        : 'Por favor, selecciona al menos una materia de tu interés')
       setLoading(false)
       return
     }
@@ -67,7 +85,8 @@ function Register() {
             full_name: formData.fullName,
             username: formData.username,
             career: formData.career,
-            account_type: accountType
+            account_type: accountType,
+            subjects: formData.subjects
           }
         }
       })
@@ -108,6 +127,16 @@ function Register() {
     'Ingeniería Mecánica Eléctrica',
     'Ingeniería en Electricidad y Automatización',
     'Ingeniería en Topografía y Construcción'
+  ]
+
+  const subjects = [
+    'Cálculo A',
+    'Cálculo D',
+    'Estructuras de Datos I',
+    'Estructuras de Datos II',
+    'Álgebra B',
+    'Electricidad y Magnetismo',
+    'Termodinámica'
   ]
 
   return (
@@ -198,6 +227,28 @@ function Register() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  <div className="flex items-center">
+                    <FaBook className="mr-2" />
+                    {accountType === 'professor' ? 'Materias que impartes' : 'Materias de interés'}
+                  </div>
+                </label>
+                <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3">
+                  {subjects.map((subject) => (
+                    <label key={subject} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input
+                        type="checkbox"
+                        checked={formData.subjects.includes(subject)}
+                        onChange={() => handleSubjectChange(subject)}
+                        className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                      />
+                      <span className="text-gray-700">{subject}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div>
