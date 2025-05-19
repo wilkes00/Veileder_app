@@ -64,13 +64,13 @@ function Register() {
 
     try {
       // Verificar si el correo ya está registrado
-      const { data: existingUser } = await supabase
+      const { data } = await supabase
         .from('users')
         .select('email')
         .eq('email', formData.email)
-        .single()
+        .limit(1)
 
-      if (existingUser) {
+      if (data && data.length > 0) {
         setError('Este correo electrónico ya está registrado. Por favor, utiliza otro correo o inicia sesión.')
         setLoading(false)
         return
