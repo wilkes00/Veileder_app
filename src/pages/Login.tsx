@@ -19,16 +19,33 @@ function Login() {
     setLoading(true)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (error) {
-        if (error.message === 'Invalid login credentials') {
+      if (signInError) {
+        if (signInError.message === 'Invalid login credentials') {
           throw new Error('Correo o contraseña incorrectos. Por favor verifica tus datos.')
         }
-        throw error
+        throw signInError
+      }
+
+      if (!authData.user) {
+        throw new Error('No se pudo iniciar sesión. Por favor intenta de nuevo.')
+      }
+
+      // Fetch user profile data
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authData.user.id)
+        .maybeSingle()
+
+      if (userError) throw userError
+
+      if (!userData) {
+        throw new Error('No se encontró el perfil de usuario.')
       }
 
       setSuccess('¡Inicio de sesión exitoso!')
