@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaGraduationCap, FaEnvelope, FaArrowLeft, FaUserCircle } from 'react-icons/fa';
+import { FaGraduationCap, FaEnvelope, FaArrowLeft } from 'react-icons/fa';
 import { supabase } from '../lib/supabase';
 
 interface User {
@@ -26,25 +26,39 @@ function UserProfile() {
     const fetchUsers = async () => {
       try {
         // Get current user
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError) throw authError;
+        
         if (!authUser) {
           navigate('/');
           return;
         }
+
         setCurrentUser(authUser);
 
         // Get profile user
-        const { data: users, error } = await supabase
+        const { data: profileUser, error: profileError } = await supabase
           .from('users')
           .select('*')
           .eq('username', username)
           .single();
 
-        if (error) throw error;
-        setUser(users);
+        if (profileError) {
+          if (profileError.message.includes('Results contain 0 rows')) {
+            throw new Error('Usuario no encontrado');
+          }
+          throw profileError;
+        }
+
+        if (!profileUser) {
+          throw new Error('Usuario no encontrado');
+        }
+
+        setUser(profileUser);
       } catch (error: any) {
         console.error('Error fetching user:', error.message);
-        setError('Error al cargar el perfil del usuario');
+        setError(error.message || 'Error al cargar el perfil del usuario');
       }
     };
 
@@ -85,7 +99,17 @@ function UserProfile() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-xl">
-          <p className="text-gray-600">Cargando perfil...</p>
+          <p className="text-gray-600">
+            {error || 'Cargando perfil...'}
+          </p>
+          {error && (
+            <button
+              onClick={() => navigate('/home')}
+              className="mt-4 text-blue-500 hover:text-blue-600"
+            >
+              Volver al inicio
+            </button>
+          )}
         </div>
       </div>
     );
