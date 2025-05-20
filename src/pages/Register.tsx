@@ -63,44 +63,57 @@ function Register() {
     }
 
     try {
-      // Verificar si el correo ya está registrado
-      const { data } = await supabase
-        .from('users')
-        .select('email')
-        .eq('email', formData.email)
-        .limit(1)
-
-      if (data && data.length > 0) {
-        setError('Este correo electrónico ya está registrado. Por favor, utiliza otro correo o inicia sesión.')
-        setLoading(false)
-        return
-      }
-
-      // Registrar usuario en Supabase Auth
+      // First, sign up the user with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
+        password: formData.password
+      })
+
+      if (authError) throw authError
+
+      if (!authData.user) {
+        throw new Error('Error al crear la cuenta')
+      }
+
+      // Then, create the user profile in the users table
+      const { error: profileError } = await supabase
+        .from('users')
+        .insert([
+          {
+            id: authData.user.id,
+            email: formData.email,
             full_name: formData.fullName,
             username: formData.username,
             career: formData.career,
             account_type: accountType,
             subjects: formData.subjects
           }
-        }
+        ])
+
+      if (profileError) {
+        // If profile creation fails, we should clean up the auth user
+        await supabase.auth.signOut()
+        throw profileError
+      }
+
+      setSuccess('¡Registro exitoso! Iniciando sesión...')
+      
+      // Sign in the user automatically
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password
       })
 
-      if (authError) throw authError
+      if (signInError) throw signInError
 
-      // Registro exitoso
-      setSuccess('¡Registro exitoso! Por favor inicia sesión.')
-      localStorage.removeItem('accountType') // Limpiar el tipo de cuenta
-      setTimeout(() => {
-        navigate('/')
-      }, 2000)
+      localStorage.removeItem('accountType')
+      navigate('/home')
     } catch (error: any) {
       if (error.message.includes('already registered')) {
+        setError('Este correo electrónico ya está registrado. Por favor, utiliza otro correo o inicia sesión.')
+      } else if (error.message.includes('duplicate key value violates unique constraint "users_username_key"')) {
+        setError('Este nombre de usuario ya está en uso. Por favor, elige otro.')
+      } else if (error.message.includes('duplicate key value violates unique constraint "users_email_key"')) {
         setError('Este correo electrónico ya está registrado. Por favor, utiliza otro correo o inicia sesión.')
       } else {
         setError(error.message)
