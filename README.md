@@ -1,6 +1,6 @@
 # Veileder
 
-![Cover](https://imgur.com/a/9FRHhmr)
+![Cover](https://imgur.com/gallery/veileder-menu-9FRHhmr#EWkCO65)
 ## ¿Qué es Veileder?
 
 Veileder es un proyecto escolar que nació de una frustración real: **encontrar quién te ayude con una materia en la universidad es innecesariamente difíci**. 
@@ -44,7 +44,7 @@ Si quieres ver el código o navegar la interfaz:
    ```bash
    git clone [https://github.com/tu-usuario/veileder.git](https://github.com/tu-usuario/veileder.git)
    ```
-2.Instala las dependencias
+2. Instala las dependencias
   ```bash
     npm install
    ```
@@ -53,5 +53,5 @@ Si quieres ver el código o navegar la interfaz:
   ```bash
     npm run dev
    ```
-##Estado del Proyecto
+## Estado del Proyecto
 Actualmente el login/register, buscar y crear grupos funcionan. Aun hace falta trabajar en mejorar el feedback visual de los estados de carga y en los mensajes entre usuarios.
