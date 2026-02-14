@@ -1,6 +1,6 @@
 # Veileder
 
-
+![Cover](https://imgur.com/a/9FRHhmr)
 ## ¿Qué es Veileder?
 
 Veileder es un proyecto escolar que nació de una frustración real: **encontrar quién te ayude con una materia en la universidad es innecesariamente difíci**. 
@@ -43,13 +43,15 @@ Si quieres ver el código o navegar la interfaz:
 1. Clona el repo:
    ```bash
    git clone [https://github.com/tu-usuario/veileder.git](https://github.com/tu-usuario/veileder.git)
-   
+   ```
 2.Instala las dependencias
   ```bash
     npm install
+   ```
 3. Crear un .env en la raiz con tus propias keys de Supabase
 4. Correr el proyecto
   ```bash
     npm run dev
-
+   ```
 ##Estado del Proyecto
+Actualmente el login/register, buscar y crear grupos funcionan. Aun hace falta trabajar en mejorar el feedback visual de los estados de carga y en los mensajes entre usuarios.
