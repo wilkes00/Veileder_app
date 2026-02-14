@@ -1,9 +1,9 @@
 # Veileder
 
-![Cover](https://imgur.com/gallery/veileder-menu-9FRHhmr#EWkCO65)
+![Cover](https://i.imgur.com/EWkCO65.png)
 ## ¿Qué es Veileder?
 
-Veileder es un proyecto escolar que nació de una frustración real: **encontrar quién te ayude con una materia en la universidad es innecesariamente difíci**. 
+Veileder es un proyecto escolar que nació de una frustración real: **encontrar quién te ayude con una materia en la universidad es innecesariamente difícil**. 
 
 Normalmente dependemos de grupos de WhatsApp o de un aviso pegado en un tablero en los edificios que nadie se detiene realmente a mirar. Quise diseñar una solución digital que hiciera este proceso simple, conectando a estudiantes que necesitan ayuda con compañeros o tutores que dominan el tema.
 
@@ -14,7 +14,7 @@ Como mi objetivo es el perfil de UI/UX, no solo construí la app, sino que me en
 ### 1. Onboarding Segmentado
 Me di cuenta de que pedir todos los datos de golpe abruma al usuario.
 * **Decisión:** Dividí el flujo de registro desde el inicio (`AccountType`).
-* **Resultado:** Si eres estudiante, no te pregunto cosas de profesores. La interfaz se adapta a tu contexto desde el segundo uno.
+* **Resultado:** Si eres estudiante, no se preguntan cosas de profesores. La interfaz se adapta a tu contexto desde el segundo uno.
 
 ### 2. Búsqueda sin Fricción
 La función principal es encontrar ayuda.
@@ -42,7 +42,7 @@ Si quieres ver el código o navegar la interfaz:
 
 1. Clona el repo:
    ```bash
-   git clone [https://github.com/tu-usuario/veileder.git](https://github.com/tu-usuario/veileder.git)
+   git clone https://github.com/wilkes00/Veileder_app.git
    ```
 2. Instala las dependencias
   ```bash
